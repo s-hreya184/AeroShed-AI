@@ -6,7 +6,9 @@ from ortools.sat.python import cp_model
 from datetime import datetime, timedelta
 
 # Page configuration
-st.set_page_config(page_title="OR-Tools Schedule Optimizer", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="OR-Tools Schedpython -m pip install --upgrade pip
+pip install ortools
+ule Optimizer", layout="wide", initial_sidebar_state="collapsed")
 
 # Custom CSS - Matching original dashboard theme
 st.markdown("""
