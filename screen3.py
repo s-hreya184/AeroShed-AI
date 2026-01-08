@@ -4,6 +4,8 @@ import joblib
 import pandas as pd
 import numpy as np
 from pathlib import Path
+import requests
+import json
 
 # ---------------- SESSION STATE INITIALIZATION ----------------
 if 'weather_delay_result' not in st.session_state:
@@ -14,6 +16,67 @@ if 'equipment_failure_result' not in st.session_state:
     st.session_state.equipment_failure_result = None
 if 'emergency_landing_result' not in st.session_state:
     st.session_state.emergency_landing_result = None
+if 'copilot_response' not in st.session_state:
+    st.session_state.copilot_response = None
+if 'last_question' not in st.session_state:
+    st.session_state.last_question = ""
+
+# ---------------- AI COPILOT FUNCTIONS ----------------
+def build_runtime_analysis():
+    """Build unified runtime analysis context from all predictions"""
+    return {
+        "weather_delay": st.session_state.weather_delay_result,
+        "crew_sickness": st.session_state.crew_sickness_result,
+        "equipment_failure": st.session_state.equipment_failure_result,
+        "emergency_landing": st.session_state.emergency_landing_result
+    }
+
+def chat_phi3(user_question, analysis):
+    """Query Phi-3 with grounded runtime analysis"""
+    system_prompt = f"""You are an aviation risk explanation assistant for Azure Wings platform.
+
+STRICT RULES:
+- Use ONLY the data provided in ANALYSIS below
+- If any data is missing (None), explicitly state "insufficient data for [that prediction]"
+- Do NOT invent numbers or make assumptions
+- Do NOT give generic aviation theory unless directly supported by the data
+- Explain causality and relationships clearly
+- Be concise and actionable (3-5 sentences max)
+- Focus on the specific question asked
+
+CURRENT RUNTIME ANALYSIS:
+{json.dumps(analysis, indent=2)}
+
+Guidelines for interpretation:
+- Weather delay: risk_percentage (0-100%), delay_minutes (0-180 min)
+- Crew sickness: probability percentage (0-100%)
+- Equipment failure: failure_probability percentage (0-100%)
+- Emergency landing: emergency_probability percentage (0-100%)
+
+Answer the user's question based ONLY on this runtime data."""
+
+    try:
+        response = requests.post(
+            "http://localhost:11434/api/generate",
+            json={
+                "model": "phi3",
+                "prompt": system_prompt + "\n\nUser question: " + user_question,
+                "stream": False
+            },
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            return response.json()["response"]
+        else:
+            return f"Error: Phi-3 service returned status {response.status_code}"
+    
+    except requests.exceptions.ConnectionError:
+        return "⚠️ Cannot connect to Phi-3. Please ensure Ollama is running with: `ollama run phi3`"
+    except requests.exceptions.Timeout:
+        return "⚠️ Request timeout. Phi-3 is taking too long to respond."
+    except Exception as e:
+        return f"⚠️ Error communicating with Phi-3: {str(e)}"
 
 # ---------------- MODEL LOADING ----------------
 @st.cache_resource
@@ -169,6 +232,19 @@ div[role="radiogroup"] label:hover {
     background-color: rgba(37, 99, 235, 0.1);
     border-left: 4px solid #2563eb;
     color: white;
+}
+
+.stTextInput > div > div > input {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+}
+
+.stExpander {
+    background-color: rgba(37, 99, 235, 0.05);
+    border: 1px solid rgba(37, 99, 235, 0.3);
+    border-radius: 12px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -795,13 +871,107 @@ with col_result:
                     st.session_state.crew_sickness_result = None
                     st.session_state.equipment_failure_result = None
                     st.session_state.emergency_landing_result = None
+                    st.session_state.copilot_response = None
+                    st.session_state.last_question = ""
                     st.success("All predictions reset! You can now generate new predictions.")
                     st.rerun()
 
     else:
         st.info("Adjust input parameters and click **Run Prediction** to view results.")
         st.markdown("### About This Platform")
-        st.markdown("Azure Wings uses advanced machine learning models to predict aviation risks across multiple domains:\n\n- **Weather Delay**: Predicts flight delays based on meteorological conditions\n- **Crew Sickness**: Uses ML model to assess crew availability risks\n- **Equipment Failure**: ML-powered prediction with dual models (probability + risk level)\n- **Emergency Landing**: Real-time flight safety assessment with comprehensive risk analysis\n- **Operational Risk**: Comprehensive risk aggregation using all previous predictions")
+        st.markdown("Azure Wings uses advanced machine learning models to predict aviation risks across multiple domains:\n\n- **Weather Delay**: Predicts flight delays based on meteorological conditions\n- **Crew Sickness**: Uses ML model to assess crew availability risks\n- **Equipment Failure**: ML-powered prediction with dual models (probability + risk level)\n- **Emergency Landing**: Real-time flight safety assessment with comprehensive risk analysis\n- **Operational Risk**: Comprehensive risk aggregation using all previous predictions\n- **AI Copilot**: Phi-3 powered explainability for grounded risk analysis")
+
+    # ================= PERSISTENT AI COPILOT (ALWAYS VISIBLE) =================
+    st.markdown("---")
+    st.markdown("---")
+    st.markdown("## 🤖 AI Operational Copilot")
+    st.caption("Ask Phi-3 to explain predictions using grounded runtime data • No hallucinations • No retraining")
+    
+    analysis = build_runtime_analysis()
+    available_count = sum(1 for v in analysis.values() if v is not None)
+    
+    # Show status
+    st.markdown(f"**📊 Available Predictions: {available_count}/4**")
+    
+    if available_count > 0:
+        col_a, col_b, col_c, col_d = st.columns(4)
+        with col_a:
+            if analysis['weather_delay']:
+                st.metric("Weather", f"{analysis['weather_delay']['risk_percentage']}%", "✅")
+            else:
+                st.metric("Weather", "N/A", "❌")
+        with col_b:
+            if analysis['crew_sickness']:
+                st.metric("Crew", f"{analysis['crew_sickness']['probability']}%", "✅")
+            else:
+                st.metric("Crew", "N/A", "❌")
+        with col_c:
+            if analysis['equipment_failure']:
+                st.metric("Equipment", f"{analysis['equipment_failure']['failure_probability']:.0f}%", "✅")
+            else:
+                st.metric("Equipment", "N/A", "❌")
+        with col_d:
+            if analysis['emergency_landing']:
+                st.metric("Emergency", f"{analysis['emergency_landing']['emergency_probability']:.0f}%", "✅")
+            else:
+                st.metric("Emergency", "N/A", "❌")
+        
+        st.markdown("---")
+        
+        # Example questions
+        with st.expander("💡 Example Questions", expanded=False):
+            ex_col1, ex_col2 = st.columns(2)
+            with ex_col1:
+                st.caption("• Why is the operational risk high?")
+                st.caption("• Which factor contributed the most?")
+                st.caption("• What should operations address first?")
+            with ex_col2:
+                st.caption("• Is crew risk more critical than weather?")
+                st.caption("• Why is equipment risk flagged critical?")
+                st.caption("• What are the top 2 risk drivers?")
+        
+        st.markdown("---")
+        
+        # Question input with persistent state
+        user_query = st.text_input(
+            "Your Question:",
+            value=st.session_state.last_question,
+            placeholder="e.g., Why is the operational risk elevated?",
+            key="copilot_query_main"
+        )
+        
+        col_btn1, col_btn2 = st.columns([3, 1])
+        with col_btn1:
+            ask_button = st.button("🔍 Ask Phi-3 Copilot", use_container_width=True, type="primary")
+        with col_btn2:
+            if st.button("🗑️ Clear", use_container_width=True):
+                st.session_state.copilot_response = None
+                st.session_state.last_question = ""
+                st.rerun()
+        
+        if ask_button:
+            if not user_query:
+                st.warning("⚠️ Please enter a question first.")
+            else:
+                st.session_state.last_question = user_query
+                with st.spinner("🔍 Analyzing with Phi-3..."):
+                    answer = chat_phi3(user_query, analysis)
+                    st.session_state.copilot_response = answer
+        
+        # Display response persistently
+        if st.session_state.copilot_response:
+            st.markdown("---")
+            st.markdown("### 🤖 Copilot Response:")
+            st.success(st.session_state.copilot_response)
+            st.caption("💡 This explanation is based only on your current runtime predictions, not generic aviation theory.")
+    
+    else:
+        st.warning("⚠️ No predictions available yet. Run at least one prediction model to start asking questions.")
+        st.markdown("**Quick Start:**")
+        st.markdown("1. Select a prediction model above (Weather, Crew, Equipment, or Emergency)")
+        st.markdown("2. Adjust the input parameters")
+        st.markdown("3. Click 'Run Prediction'")
+        st.markdown("4. Return here to ask the AI Copilot questions about the results")
 
 st.markdown("---")
-st.markdown("<p style='text-align: center; color: #64748b;'>Azure Wings Risk Platform v2.0 | Powered by AI</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #64748b;'>Azure Wings Risk Platform v2.1 | Powered by AI + Phi-3 Copilot</p>", unsafe_allow_html=True)

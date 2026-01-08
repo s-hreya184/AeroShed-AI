@@ -1,107 +1,73 @@
 import streamlit as st
-import pandas as pd
-import plotly.express as px
-from datetime import datetime, timedelta
+import requests
+import json
 
-st.set_page_config(
-    page_title="AI Crew Scheduling Dashboard",
-    layout="wide"
-)
+st.set_page_config(page_title="AeroShed AI Copilot", layout="centered")
 
-# HEADER 
-st.markdown(
-    """
-    <h1>AI-Driven Constraint-Aware Crew Scheduling</h1>
-    <p style='color: gray;'>Powered by Azure Machine Learning & Azure OpenAI</p>
-    """,
-    unsafe_allow_html=True
-)
+st.title("✈️ AeroShed AI – Operational Copilot")
+st.caption("Local LLM (Phi-3) for Explainable Crew Scheduling Decisions")
 
-st.divider()
-
-# SCENARIO CONTROLS 
-col1, col2, col3 = st.columns([1.5, 1, 1])
-
-with col1:
-    scenario = st.selectbox(
-        "Select Scenario",
-        ["Normal Operations", "Crew Sick Call", "Weather Delay"]
-    )
-
-with col2:
-    st.button("Run Initial Schedule")
-
-with col3:
-    st.button("Simulate Disruption")
-
-st.button("Re-Optimize with AI")
-
-st.divider()
-
-# KPI METRICS 
-k1, k2, k3, k4 = st.columns(4)
-
-k1.metric("Total Delay (min)", "55", "-65")
-k2.metric("Crew Utilization (%)", "82", "+14")
-k3.metric("Constraint Violations", "0", "-2")
-k4.metric("Fatigue Index", "5.1", "-1.4")
-
-st.divider()
-
-#SCHEDULE DATA 
-data = [
-    dict(Crew="C01", Flight="F101", Start="2025-01-01 06:00", End="2025-01-01 08:00", Status="Valid"),
-    dict(Crew="C02", Flight="F102", Start="2025-01-01 07:30", End="2025-01-01 10:00", Status="Delayed"),
-    dict(Crew="C03", Flight="F103", Start="2025-01-01 09:00", End="2025-01-01 11:00", Status="Violation"),
-    dict(Crew="C04", Flight="F104", Start="2025-01-01 11:30", End="2025-01-01 14:00", Status="Valid"),
-    dict(Crew="C05", Flight="F105", Start="2025-01-01 12:00", End="2025-01-01 15:00", Status="Valid"),
-]
-
-df = pd.DataFrame(data)
-df["Start"] = pd.to_datetime(df["Start"])
-df["End"] = pd.to_datetime(df["End"])
-
-color_map = {
-    "Valid": "green",
-    "Delayed": "orange",
-    "Violation": "red"
+# ---- Runtime analysis from your ML models (mock for now) ----
+analysis = {
+    "crew_fatigue": {
+        "score": 0.78,
+        "risk_level": "High",
+        "reason": "Extended duty hours and reduced rest"
+    },
+    "weather_risk": {
+        "level": "Moderate",
+        "wind_speed": 32,
+        "visibility": "Low"
+    },
+    "schedule_feasibility": {
+        "feasible": False,
+        "issue": "Crew rest violation"
+    },
+    "delay_probability": 0.62
 }
 
-# GANTT CHART 
-fig = px.timeline(
-    df,
-    x_start="Start",
-    x_end="End",
-    y="Crew",
-    color="Status",
-    text="Flight",
-    color_discrete_map=color_map
+# ---- Phi-3 call ----
+def chat_phi3(user_question, analysis):
+    system_prompt = f"""
+You are an aviation operational risk explanation assistant.
+
+STRICT RULES:
+- Use ONLY the analysis provided below.
+- Do NOT invent values, causes, or assumptions.
+- Do NOT suggest changes unless explicitly asked.
+- If the question cannot be answered using the analysis, say:
+  "This question cannot be answered with the available model outputs."
+
+ANALYSIS:
+{json.dumps(analysis, indent=2)}
+
+TASK:
+Answer the user's question clearly, concisely, and factually.
+"""
+
+    response = requests.post(
+        "http://localhost:11434/api/generate",
+        json={
+            "model": "phi3",
+            "prompt": system_prompt + "\nUSER QUESTION: " + user_question,
+            "stream": False
+        },
+        timeout=60
+    )
+
+    return response.json()["response"]
+
+# ---- UI ----
+st.markdown("### Ask the AI about the current operational risk")
+
+user_query = st.text_input(
+    "Example: Why is this flight considered high risk?"
 )
-
-fig.update_layout(
-    title="Crew Schedule Timeline",
-    xaxis_title="Time",
-    yaxis_title="Crew ID",
-    showlegend=True,
-    height=450
-)
-
-st.plotly_chart(fig, use_container_width=True)
-
-#AI INSIGHTS PANEL
-st.divider()
-st.subheader("AI Operational Insights")
-
-st.markdown(
-    """
-    - Crew **C03** was reassigned to avoid exceeding maximum duty hours.
-    - This re-optimization eliminated **2 constraint violations**.
-    - Crew utilization increased by **14%** with minimal additional delay.
-    - Reducing minimum rest time by **1 hour** would introduce **3 new violations**.
-    """
-)
-
-user_query = st.text_input("Ask a what-if question (powered by Azure OpenAI):")
 
 if user_query:
-    st.info("🔹 AI Response (placeholder): Adjusting rest limits would negatively impact safety compliance.")
+    with st.spinner("Analyzing with Phi-3..."):
+        try:
+            answer = chat_phi3(user_query, analysis)
+            st.success(answer)
+        except Exception as e:
+            st.error("AI service is not responding. Please ensure Ollama is running.")
