@@ -15,7 +15,7 @@ We built AeroShed-AI for Microsoft Imagine Cup to create a smarter, AI-driven so
 - Detects scheduling conflicts
 - Re-optimizes schedules automatically
 - Visual before/after comparison
-- 
+  
 ## Tech Stack
 - Python
 - Azure Notebooks
