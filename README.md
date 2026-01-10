@@ -18,7 +18,7 @@ We built AeroShed-AI for Microsoft Imagine Cup to create a smarter, AI-driven so
 - 
 ## Tech Stack
 - Python
-- Jupyter Notebooks
+- Azure Notebooks
 - Constraint optimization
 - Machine learning models (e.g., scikit-learn)
 
