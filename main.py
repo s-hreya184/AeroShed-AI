@@ -5,7 +5,7 @@ import os
 # PAGE CONFIGURATION
 # ============================================================================
 st.set_page_config(
-    page_title="Azure Wings – Aviation Platform",
+    page_title="AeroZen Aviation Platform",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -162,7 +162,7 @@ st.markdown("""
 st.markdown("""
 <div class='hero-section'>
     <h1 style='font-size: 2.75rem; margin-bottom: 0.5rem; font-weight: 700; letter-spacing: -0.02em;'>
-        Azure Wings
+        AeroZen
     </h1>
     <p style='font-size: 1.15rem; color: #94a3b8; margin: 0; font-weight: 400; letter-spacing: 0.01em;'>
         Integrated Aviation Management Platform
@@ -346,7 +346,7 @@ st.markdown("---")
 st.markdown("""
 <div style='text-align: center; color: #64748b; padding: 1.25rem 0;'>
     <p style='margin: 0; font-size: 0.95rem; font-weight: 500;'>
-        <span style='color: #94a3b8;'>Azure Wings Platform</span> <span style='color: #475569;'>v2.0</span>
+        <span style='color: #94a3b8;'>AeroZen Platform</span> <span style='color: #475569;'>v2.0</span>
     </p>
     <p style='margin: 0.5rem 0 0 0; font-size: 0.85rem; color: #475569;'>
         Powered by Machine Learning, Optimization Algorithms & Artificial Intelligence

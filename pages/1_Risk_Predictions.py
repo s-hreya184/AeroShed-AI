@@ -7,13 +7,12 @@ from pathlib import Path
 import requests
 import json
 
-import streamlit as st
-
+# ---------------- PAGE CONFIG (MUST BE FIRST) ----------------
 st.set_page_config(
-    page_title="Risk Predictions & AI Copilot",
-    layout="wide"
+    page_title="Aero-Zen Aviation Risk Platform",
+    layout="wide",
+    initial_sidebar_state="collapsed"
 )
-
 
 # ---------------- SESSION STATE INITIALIZATION ----------------
 if 'weather_delay_result' not in st.session_state:
@@ -41,7 +40,7 @@ def build_runtime_analysis():
 
 def chat_phi3(user_question, analysis):
     """Query Phi-3 with grounded runtime analysis"""
-    system_prompt = f"""You are an aviation risk explanation assistant for Azure Wings platform.
+    system_prompt = f"""You are an aviation risk explanation assistant for AeroZen platform.
 
 STRICT RULES:
 - Use ONLY the data provided in ANALYSIS below
@@ -80,11 +79,11 @@ Answer the user's question based ONLY on this runtime data."""
             return f"Error: Phi-3 service returned status {response.status_code}"
     
     except requests.exceptions.ConnectionError:
-        return "⚠️ Cannot connect to Phi-3. Please ensure Ollama is running with: `ollama run phi3`"
+        return "Cannot connect to Phi-3. Please ensure Ollama is running with: `ollama run phi3`"
     except requests.exceptions.Timeout:
-        return "⚠️ Request timeout. Phi-3 is taking too long to respond."
+        return "Request timeout. Phi-3 is taking too long to respond."
     except Exception as e:
-        return f"⚠️ Error communicating with Phi-3: {str(e)}"
+        return f"Error communicating with Phi-3: {str(e)}"
 
 # ---------------- MODEL LOADING ----------------
 @st.cache_resource
@@ -163,13 +162,6 @@ crew_model = load_crew_model()
 weather_model = load_weather_model()
 equipment_prob_model, equipment_risk_model = load_equipment_models()
 emergency_prob_model, emergency_risk_model = load_emergency_models()
-
-# ---------------- PAGE CONFIG ----------------
-st.set_page_config(
-    page_title="Azure Wings – Aviation Risk Platform",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
 
 # ---------------- ENHANCED DARK THEME ----------------
 st.markdown("""
@@ -258,7 +250,7 @@ div[role="radiogroup"] label:hover {
 """, unsafe_allow_html=True)
 
 # ---------------- HEADER ----------------
-st.markdown("<h1 style='text-align: center; margin-bottom: 0;'>Azure Wings</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; margin-bottom: 0;'>AeroZen</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align: center; font-size: 1.2rem; color: #94a3b8; margin-top: 0;'>Intelligent Aviation Risk & Safety Platform</p>", unsafe_allow_html=True)
 st.markdown("---")
 
@@ -286,6 +278,7 @@ with col_input:
     
     if "Weather" in model:
         st.info("Model-Ready: Using trained Ensemble Regressor")
+        st.info("Adjust input parameters and click **Run Prediction** to view results.")
         
         col1, col2 = st.columns(2)
         with col1:
@@ -318,6 +311,7 @@ with col_input:
 
     elif "Crew" in model:
         st.info("Model-Ready: Using trained Random Forest pipeline")
+        st.info("Adjust input parameters and click **Run Prediction** to view results.")
         
         workload_last_7_days = st.slider("Workload Last 7 Days (hours)", 10, 70, 45)
         consecutive_duty_days = st.slider("Consecutive Duty Days", 1, 14, 5)
@@ -338,6 +332,7 @@ with col_input:
 
     elif "Equipment" in model:
         st.info("Model-Ready: Using trained ML Models (Binary + Risk Level)")
+        st.info("Adjust input parameters and click **Run Prediction** to view results.")
         
         aircraft_id = st.text_input("Aircraft ID", "AC0001")
         
@@ -369,6 +364,7 @@ with col_input:
 
     elif "Emergency" in model:
         st.info("Model-Ready: Using trained ML Models (GB + RF)")
+        st.info("Adjust input parameters and click **Run Prediction** to view results.")
         
         flight_id = st.text_input("Flight ID", "FL0001")
         
@@ -596,12 +592,6 @@ with col_result:
                     st.error(f"Model prediction error: {str(e)}")
                     failure_probability = min(100, int((aircraft_age_years / 25) * 30 + (hours_since_last_maintenance / 500) * 35 + (reported_minor_issues_last_30_days / 15) * 35))
                     risk_level = "Low" if failure_probability < 25 else "Medium" if failure_probability < 50 else "High" if failure_probability < 75 else "Critical"
-                    recommended_action = "Continue" if failure_probability < 25 else "Monitor" if failure_probability < 50 else "Schedule Maintenance" if failure_probability < 75 else "Immediate Maintenance"
-                    risk_confidence = 75.0
-                    model_used = "Fallback (Rule-based)"
-            else:
-                failure_probability = min(100, int((aircraft_age_years / 25) * 30 + (hours_since_last_maintenance / 500) * 35 + (reported_minor_issues_last_30_days / 15) * 35))
-                risk_level = "Low" if failure_probability < 25 else "Medium" if failure_probability < 50 else "High" if failure_probability < 75 else "Critical"
                 recommended_action = "Continue" if failure_probability < 25 else "Monitor" if failure_probability < 50 else "Schedule Maintenance" if failure_probability < 75 else "Immediate Maintenance"
                 risk_confidence = 75.0
                 model_used = "Simulation Mode"
@@ -768,25 +758,25 @@ with col_result:
                 missing_predictions.append("Emergency Landing Risk")
             
             if missing_predictions:
-                st.warning("⚠️ Operational Risk Index requires predictions from all other models first!")
+                st.warning("Operational Risk Index requires predictions from all other models first!")
                 st.markdown("### Missing Predictions:")
                 for pred in missing_predictions:
-                    st.markdown(f"- ❌ **{pred}**")
+                    st.markdown(f"- **{pred}**")
                 
                 st.markdown("---")
-                st.info("📋 **How to use Operational Risk Index:**")
+                st.info("**How to use Operational Risk Index:**")
                 st.markdown("1. Select each prediction model from the radio buttons above\n2. Fill in the required parameters\n3. Click 'Run Prediction' for each model\n4. Once all predictions are complete, return to 'Operational Risk Index'\n5. Click 'Calculate Operational Risk' to see aggregated results")
                 
                 st.markdown("---")
                 st.markdown("### Already Completed Predictions:")
                 if weather_data:
-                    st.markdown(f"✅ **Weather Delay**: {weather_data['risk_percentage']}% risk ({weather_data['delay_minutes']:.0f} min delay)")
+                    st.markdown(f"**Weather Delay**: {weather_data['risk_percentage']}% risk ({weather_data['delay_minutes']:.0f} min delay)")
                 if crew_data:
-                    st.markdown(f"✅ **Crew Sickness**: {crew_data['probability']}% probability")
+                    st.markdown(f"**Crew Sickness**: {crew_data['probability']}% probability")
                 if equipment_data:
-                    st.markdown(f"✅ **Equipment Failure**: {equipment_data['failure_probability']:.1f}% probability")
+                    st.markdown(f"**Equipment Failure**: {equipment_data['failure_probability']:.1f}% probability")
                 if emergency_data:
-                    st.markdown(f"✅ **Emergency Landing**: {emergency_data['emergency_probability']:.1f}% probability")
+                    st.markdown(f"**Emergency Landing**: {emergency_data['emergency_probability']:.1f}% probability")
             
             else:
                 # All predictions available - calculate operational risk
@@ -845,13 +835,13 @@ with col_result:
                 
                 # Risk interpretation
                 if operational_risk <= 40:
-                    st.success("✅ **STABLE OPERATIONS** - All systems within acceptable risk parameters")
+                    st.success("**STABLE OPERATIONS** - All systems within acceptable risk parameters")
                     st.markdown("**Recommended Actions:**\n- Continue normal operations\n- Maintain standard monitoring protocols\n- Review predictions periodically")
                 elif operational_risk <= 70:
-                    st.warning("⚠️ **ELEVATED RISK** - Increased attention required")
+                    st.warning("**ELEVATED RISK** - Increased attention required")
                     st.markdown("**Recommended Actions:**\n- Increase monitoring frequency\n- Review contingency plans\n- Brief crew on elevated risk factors\n- Consider operational adjustments")
                 else:
-                    st.error("🚨 **CRITICAL RISK** - Immediate action required")
+                    st.error("**CRITICAL RISK** - Immediate action required")
                     st.markdown("**Immediate Actions Required:**\n- Activate emergency response protocols\n- Notify all relevant personnel\n- Review and address highest risk factors\n- Consider operational restrictions\n- Implement additional safety measures")
                 
                 st.markdown("---")
@@ -885,21 +875,22 @@ with col_result:
                     st.rerun()
 
     else:
-        st.info("Adjust input parameters and click **Run Prediction** to view results.")
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("### About This Platform")
-        st.markdown("Azure Wings uses advanced machine learning models to predict aviation risks across multiple domains:\n\n- **Weather Delay**: Predicts flight delays based on meteorological conditions\n- **Crew Sickness**: Uses ML model to assess crew availability risks\n- **Equipment Failure**: ML-powered prediction with dual models (probability + risk level)\n- **Emergency Landing**: Real-time flight safety assessment with comprehensive risk analysis\n- **Operational Risk**: Comprehensive risk aggregation using all previous predictions\n- **AI Copilot**: Phi-3 powered explainability for grounded risk analysis")
+        st.markdown("AeroZen uses advanced machine learning models to predict aviation risks across multiple domains:\n\n- **Weather Delay**: Predicts flight delays based on meteorological conditions\n- **Crew Sickness**: Uses ML model to assess crew availability risks\n- **Equipment Failure**: ML-powered prediction with dual models (probability + risk level)\n- **Emergency Landing**: Real-time flight safety assessment with comprehensive risk analysis\n- **Operational Risk**: Comprehensive risk aggregation using all previous predictions\n- **AI Copilot**: Phi-3 powered explainability for grounded risk analysis")
 
     # ================= PERSISTENT AI COPILOT (ALWAYS VISIBLE) =================
     st.markdown("---")
     st.markdown("---")
-    st.markdown("## 🤖 AI Operational Copilot")
+    st.markdown("## AI Operational Copilot")
     st.caption("Ask Phi-3 to explain predictions using grounded runtime data • No hallucinations • No retraining")
     
     analysis = build_runtime_analysis()
     available_count = sum(1 for v in analysis.values() if v is not None)
     
     # Show status
-    st.markdown(f"**📊 Available Predictions: {available_count}/4**")
+    st.markdown(f"**Available Predictions: {available_count}/4**")
     
     if available_count > 0:
         col_a, col_b, col_c, col_d = st.columns(4)
@@ -950,31 +941,31 @@ with col_result:
         
         col_btn1, col_btn2 = st.columns([3, 1])
         with col_btn1:
-            ask_button = st.button("🔍 Ask Phi-3 Copilot", use_container_width=True, type="primary")
+            ask_button = st.button("Ask Phi-3 Copilot", use_container_width=True, type="primary")
         with col_btn2:
-            if st.button("🗑️ Clear", use_container_width=True):
+            if st.button("Clear", use_container_width=True):
                 st.session_state.copilot_response = None
                 st.session_state.last_question = ""
                 st.rerun()
         
         if ask_button:
             if not user_query:
-                st.warning("⚠️ Please enter a question first.")
+                st.warning("Please enter a question first.")
             else:
                 st.session_state.last_question = user_query
-                with st.spinner("🔍 Analyzing with Phi-3..."):
+                with st.spinner("Analyzing with Phi-3..."):
                     answer = chat_phi3(user_query, analysis)
                     st.session_state.copilot_response = answer
         
         # Display response persistently
         if st.session_state.copilot_response:
             st.markdown("---")
-            st.markdown("### 🤖 Copilot Response:")
+            st.markdown("### Copilot Response:")
             st.success(st.session_state.copilot_response)
-            st.caption("💡 This explanation is based only on your current runtime predictions, not generic aviation theory.")
+            st.caption("This explanation is based only on your current runtime predictions, not generic aviation theory.")
     
     else:
-        st.warning("⚠️ No predictions available yet. Run at least one prediction model to start asking questions.")
+        st.warning("No predictions available yet. Run at least one prediction model to start asking questions.")
         st.markdown("**Quick Start:**")
         st.markdown("1. Select a prediction model above (Weather, Crew, Equipment, or Emergency)")
         st.markdown("2. Adjust the input parameters")
@@ -982,4 +973,11 @@ with col_result:
         st.markdown("4. Return here to ask the AI Copilot questions about the results")
 
 st.markdown("---")
-st.markdown("<p style='text-align: center; color: #64748b;'>Azure Wings Risk Platform v2.1 | Powered by AI + Phi-3 Copilot</p>", unsafe_allow_html=True)
+st.markdown(
+    "<p style='text-align: center; color: #64748b;'>"
+    "AeroZen Risk Platform v2.1 | Powered by AI + Phi-3 Copilot"
+    "</p>",
+    unsafe_allow_html=True
+)
+
+
