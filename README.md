@@ -8,7 +8,7 @@ Flight disruptions like weather delays and crew shortages cause scheduling chaos
 We built AeroShed-AI for Microsoft Imagine Cup to create a smarter, AI-driven solution for airport scheduling challenges — blending machine learning and constraint optimization to minimize disruptions.
 
 ## Demo
-![AeroShed AI Screenshot](path/to/screenshot.png)
+https://drive.google.com/file/d/19gsWlHp6wQmmKdSUliJEIsGf6BjDsMsC/view?usp=drive_link
 
 ## Features
 - Predicts flight-related disruptions using ML models
