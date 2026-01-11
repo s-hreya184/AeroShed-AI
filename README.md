@@ -47,6 +47,6 @@ Contributions are welcome! Please open an issue or send a pull request.
 - Aditi Singnurkar – @aditisingnurkar
 - Jui Baviskar – @Jui-baviskar
 - Shreya Babar – @s-hreya184
-- Nandini Jain-
+- Nandini Jain- @Nandinijain0412
 
 
